@@ -17,19 +17,53 @@ db.init_app(app)
 def home():
     return ''
 
-@app.route('/vendors')
+#  route for all VENDORS
+@app.route('/vendors', methods = ['GET', 'POST'])
 def vendors():
-    venders = Vendor.query.all()
-    venders_to_dict = [vender.to_dict() for vender in venders]
-    return make_response(jsonify(venders_to_dict), 200)
+    # GET for all VENDORS
+    if request.method == 'GET':
+        venders = Vendor.query.all()
+        venders_to_dict = [vender.to_dict() for vender in venders]
+        return make_response(jsonify(venders_to_dict), 200)
+    # POST for all VENDORS
+    if request.method == 'POST':
+        body = request.get_json()
+        new_vendor = Vendor()
+        for key in body:
+            setattr(new_vendor, key, body[key])
+        db.session.add(new_vendor) 
+        db.session.commit()
+        return make_response(jsonify(new_vendor.to_dict()), 201)  
 
-@app.route('/vendors/<int:id>')
+#  route for VENDORS by ID
+@app.route('/vendors/<int:id>', methods = ['GET', 'DELETE', 'PATCH'])
 def vendor_by_id(id):
-    vender = Vendor.query.get(id)
-    if not vender:
+    vender_exists = Vendor.query.get(id)
+    # validates that 
+    if not vender_exists:
         return make_response(jsonify({"error": "Vendor not found"}), 404)
-    else:
-        return make_response(jsonify(vender.to_dict()), 200)
+    elif vender_exists:
+        # GET for VENDOR by ID
+        if request.method == 'GET':
+            return make_response(jsonify(vender_exists.to_dict()), 200)
+        # DELETE for VENDOR by ID
+        elif request.method == 'DELETE':  
+            # first deletes all instances of this vendor in vendor_sweets
+            VendorSweet.query.filter(id == VendorSweet.vendor_id).delete()
+            # and then deletes the vendor 
+            db.session.delete(vender_exists)
+            db.session.commit()
+            return make_response(jsonify({"status": "DELETE succsessful"}), 200)
+        # PATCH for VENDOR by ID
+        elif request.method == 'PATCH':
+            body = request.get_json()
+            for key in body:
+                setattr(vender_exists, key, body[key])
+            db.session.add(vender_exists)
+            db.session.commit()
+            return make_response(jsonify(vender_exists.to_dict()), 200)    
+
+        
 
 # route for all sweets
 @app.route('/sweets', methods = ['GET', 'POST'])
@@ -61,6 +95,9 @@ def sweet_by_id(id):
         if request.method == 'GET':
             return make_response(jsonify(sweet.to_dict()), 200)
         elif request.method == 'DELETE':
+            #  first deletes all instances of this sweet in vendor_sweets
+            VendorSweet.query.filter(id == VendorSweet.sweet_id).delete()
+            # and the delets the sweet
             db.session.delete(sweet)
             db.session.commit()
             return make_response(jsonify({"status": "DELETE succsessful"}), 200)
@@ -79,13 +116,11 @@ def sweet_by_id(id):
 #  route for all VendorSweet
 @app.route('/vendor_sweets', methods = ['GET', 'POST'])
 def vendor_sweets():
-
     # GET for all vendor_sweets
     if request.method == 'GET':
         vendor_sweets = VendorSweet.query.all()
         vendor_sweets_dict = [vendor_sweet.to_dict() for vendor_sweet in vendor_sweets]
         return make_response(jsonify(vendor_sweets_dict), 200)
-    
     # POST for all vendor_sweets
     elif request.method == 'POST':
         body = request.get_json()
