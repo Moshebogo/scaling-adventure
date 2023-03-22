@@ -22,9 +22,9 @@ def home():
 def vendors():
     # GET for all VENDORS
     if request.method == 'GET':
-        venders = Vendor.query.all()
-        venders_to_dict = [vender.to_dict() for vender in venders]
-        return make_response(jsonify(venders_to_dict), 200)
+        vendors = Vendor.query.all()
+        vendors_to_dict = [vendor.to_dict() for vendor in vendors]
+        return make_response(jsonify(vendors_to_dict), 200)
     # POST for all VENDORS
     if request.method == 'POST':
         body = request.get_json()
@@ -38,30 +38,30 @@ def vendors():
 #  route for VENDORS by ID
 @app.route('/vendors/<int:id>', methods = ['GET', 'DELETE', 'PATCH'])
 def vendor_by_id(id):
-    vender_exists = Vendor.query.get(id)
+    vendor_exists = Vendor.query.get(id)
     # validates that 
-    if not vender_exists:
+    if not vendor_exists:
         return make_response(jsonify({"error": "Vendor not found"}), 404)
-    elif vender_exists:
+    elif vendor_exists:
         # GET for VENDOR by ID
         if request.method == 'GET':
-            return make_response(jsonify(vender_exists.to_dict()), 200)
+            return make_response(jsonify(vendor_exists.to_dict()), 200)
         # DELETE for VENDOR by ID
         elif request.method == 'DELETE':  
             # first deletes all instances of this vendor in vendor_sweets
             VendorSweet.query.filter(id == VendorSweet.vendor_id).delete()
             # and then deletes the vendor 
-            db.session.delete(vender_exists)
+            db.session.delete(vendor_exists)
             db.session.commit()
             return make_response(jsonify({"status": "DELETE succsessful"}), 200)
         # PATCH for VENDOR by ID
         elif request.method == 'PATCH':
             body = request.get_json()
             for key in body:
-                setattr(vender_exists, key, body[key])
-            db.session.add(vender_exists)
+                setattr(vendor_exists, key, body[key])
+            db.session.add(vendor_exists)
             db.session.commit()
-            return make_response(jsonify(vender_exists.to_dict()), 200)    
+            return make_response(jsonify(vendor_exists.to_dict()), 200)    
 
         
 
@@ -125,8 +125,12 @@ def vendor_sweets():
     elif request.method == 'POST':
         body = request.get_json()
         new_vendor_sweet = VendorSweet()
-        for key in body:
-            setattr(new_vendor_sweet, key, body[key])
+        try:
+            for key in body:
+                setattr(new_vendor_sweet, key, body[key])
+        # raise ValueError on price
+        except ValueError as e:
+            return make_response(jsonify({'error': str(e)}), 404)
         # validate new_vendor_sweet, if ok, return its sweets, if not return correct error
         vendor_exists = Vendor.query.get(new_vendor_sweet.vendor_id)
         sweet_exist = Sweet.query.get(new_vendor_sweet.sweet_id)

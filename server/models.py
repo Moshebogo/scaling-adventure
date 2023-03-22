@@ -2,6 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy.orm import validates
 
 metadata = MetaData(naming_convention={
     "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
@@ -44,3 +45,10 @@ class VendorSweet(db.Model, SerializerMixin):
 
     vendor_id = db.Column(db.Integer, db.ForeignKey('vendors.id'))
     sweet_id = db.Column(db.Integer, db.ForeignKey('sweets.id'))
+
+    @validates('price')
+    def validate_price(self, key, new_price):
+        if new_price < 0 or new_price == '':
+            raise ValueError(f"invalid price: {new_price}")
+        else:
+            return new_price
